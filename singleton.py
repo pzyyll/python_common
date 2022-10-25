@@ -21,9 +21,17 @@ class Singleton(object):
         """
         if not cls.__instance:
             cls.__instance = object.__new__(cls)
-            cls.__instance.__init__(*args, **kwargs)
+            # note: __init__ will be called by default, no need to manually call
+            # cls.__instance.__init__(*args, **kwargs)
+            cls.__instance.init(*args, **kwargs)
         return cls.__instance
 
     @classmethod
     def is_inited(cls):
         return cls.__instance is not None
+
+    def init(self, *args, **kwargs):
+        """
+        Override this method to provide initialization.
+        """
+        pass
