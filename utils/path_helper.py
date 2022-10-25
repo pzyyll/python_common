@@ -6,15 +6,16 @@ import sys
 
 
 class PathHelper(object):
-    def __init__(self):
+    def __init__(self, exec_file=""):
         self.exec_path = "."
+        self.exec_file = exec_file or __file__
         self._init()
     
     def _init(self):
         if getattr(sys, 'frozen', False):
             self.exec_path = pathlib.Path(sys.executable).parent.resolve()
         elif __file__:
-            self.exec_path = pathlib.Path(__file__).parent.resolve()
+            self.exec_path = pathlib.Path(self.exec_file).parent.resolve()
 
     def get_path(self, path):
         if pathlib.Path(path).is_absolute():
