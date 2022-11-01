@@ -20,8 +20,17 @@ class PathHelper(object):
     def get_path(self, path):
         if pathlib.Path(path).is_absolute():
             return path
-        else:
-            return str(pathlib.PurePath(self.exec_path, path))
+        return str(pathlib.PurePath(self.exec_path, path))
+
+    def get_resource_path(self, path):
+        if getattr(sys, '_MEIPASS', None):
+            return str(pathlib.PurePath(sys._MEIPASS, path))
+        return self.get_path(path)
+
+    def get_cwd_path(self, path):
+        if pathlib.Path(path).is_absolute():
+            return path
+        return str(pathlib.PurePath(os.getcwd(), path))
 
     def cd(self, path):
         path = self.get_path(path)
