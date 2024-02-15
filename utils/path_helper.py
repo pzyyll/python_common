@@ -18,9 +18,11 @@ class PathHelper(object):
             self.exec_path = pathlib.Path(self.exec_file).parent.resolve()
 
     def get_path(self, path):
-        if pathlib.Path(path).is_absolute():
-            return path
-        return str(pathlib.PurePath(self.exec_path, path))
+        # expand "~/"
+        pathObj = pathlib.Path(path).expanduser()
+        if pathObj.is_absolute():
+            return str(pathObj)
+        return str(pathlib.PurePath(self.exec_path, pathObj))
 
     def get_resource_path(self, path):
         if getattr(sys, '_MEIPASS', None):
