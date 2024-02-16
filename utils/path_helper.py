@@ -3,12 +3,13 @@
 import os
 import pathlib
 import sys
+import inspect
 
 
 class PathHelper(object):
     def __init__(self, exec_file=""):
         self.exec_path = "."
-        self.exec_file = exec_file or __file__
+        self.exec_file = exec_file or inspect.stack()[1].filename
         self._init()
     
     def _init(self):
@@ -22,7 +23,7 @@ class PathHelper(object):
         pathObj = pathlib.Path(path).expanduser()
         if pathObj.is_absolute():
             return str(pathObj)
-        return str(pathlib.PurePath(self.exec_path, pathObj))
+        return str(pathlib.Path(self.exec_path, pathObj).resolve())
 
     def get_resource_path(self, path):
         if getattr(sys, '_MEIPASS', None):
@@ -32,7 +33,7 @@ class PathHelper(object):
     def get_cwd_path(self, path):
         if pathlib.Path(path).is_absolute():
             return path
-        return str(pathlib.PurePath(os.getcwd(), path))
+        return str(pathlib.Path(os.getcwd(), path).resolve())
 
     def cd(self, path):
         path = self.get_path(path)
