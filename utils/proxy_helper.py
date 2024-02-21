@@ -9,48 +9,68 @@
 
 import socket
 import socks
+import logging
+import threading
+
+
+# 由于需要改全局socket，需要保证线程安全
+thread_local = threading.local()
+
+def get_proxy_stack():
+    if not hasattr(thread_local, 'proxy_stack'):
+        thread_local.proxy_stack = []
+    return thread_local.proxy_stack
 
 
 class Proxy(object):
     def __init__(self, proxy) -> None:
         self.proxy = proxy
-        self._tmp_socket = None
+        self.proto = None
+        self.ip = None
+        self.port = None
         if proxy:
-            self.proto, self.ip, self.port = self._parse_proxy_str(proxy)
+            try:
+                self.proto, self.ip, self.port = self._parse_proxy_str(proxy)
+            except ValueError as exc:
+                logging.error(exc)
+                self.proto = self.ip = self.port = None
 
     def _parse_proxy_str(self, proxy_str):
         import re
         pattern = r'((?P<proto>\w+)://)?(?P<ip>[^\s:]+)(:(?P<port>\d+))?'
         match = re.match(pattern, proxy_str)
         if not match:
-            raise ValueError(f'Invalid proxy: {proxy_str}')
+            raise ValueError(f'Invalid proxy format: {proxy_str}')
         
         proto = match.group('proto') or 'http'  # 提供默认协议
         ip = match.group('ip')
         port_str = match.group('port')
         
-        # 尝试将端口转换为整数，如果未提供端口，则设置默认端口
-        try:
-            port = int(port_str) if port_str is not None else 8080
-        except ValueError:
-            raise ValueError(f'Invalid port number: {port_str} in proxy: {proxy_str}')
+        # 设置默认端口
+        port = 8080
+        if port_str is not None:
+            try:
+                port = int(port_str)
+            except ValueError as exc:
+                raise ValueError(f'Invalid port number: {port_str} in proxy: {proxy_str}') from exc
         
         return proto.upper(), ip, port
 
+
+    def is_valid(self):
+        return self.proto and self.ip and self.port and self.proto in socks.PROXY_TYPES
+
     def set_proxy(self):
-        if not self.proxy:
-            return
-        if self.proto in socks.PROXY_TYPES:
+        if self.is_valid():
+            logging.debug(f'Setting proxy: {id(self)},{self.proxy},{socket.socket}')
             socks.set_default_proxy(socks.PROXY_TYPES[self.proto], self.ip, self.port)
-            self._tmp_socket = socket.socket  # 保存原始socket构造器
+            get_proxy_stack().append(socket.socket)
             socket.socket = socks.socksocket  # 设置新的socket构造器以使用代理
-        else:
-            raise ValueError(f'Unsupported proxy protocol: {self.proto}')
 
     def reset_proxy(self):
-        if self._tmp_socket:
-            socket.socket = self._tmp_socket
-            self._tmp_socket = None 
+        if self.is_valid():
+            logging.debug(f'Resetting proxy: {id(self)},{self.proxy},{socket.socket}')
+            socket.socket = get_proxy_stack().pop()  # 恢复原始socket构造器
 
     def __enter__(self):
         self.set_proxy()
