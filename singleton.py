@@ -2,6 +2,10 @@
 # @Date: "2022-10-25"
 # @Description: "singleton"
 
+
+from abc import ABCMeta
+
+
 class Singleton(object):
     """
     A generic base class to derive any singleton class from.
@@ -44,6 +48,10 @@ class SingletonMeta(type):
         if cls not in cls._instances:
             cls._instances[cls] = super(SingletonMeta, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
+
+
+class ABCSingletonMeta(SingletonMeta, ABCMeta):
+    pass
 
 
 def singleton(cls):
